@@ -1,0 +1,3 @@
+# PHPRouter
+Simple PHP router with different ways to handle routes.
+Work in progress...
