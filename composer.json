@@ -1,0 +1,12 @@
+{
+    "require": {
+        "monolog/monolog": "^1.24"
+    },
+    "autoload":{
+        "psr-4": {
+             "Router\\": "src/Router",
+             "Controller\\": "src/Controller",
+             "Request\\": "src/Router"
+         }
+    }
+}
