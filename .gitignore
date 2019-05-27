@@ -2,3 +2,4 @@ Controller
 Model
 View
 assets
+vendor/monolog

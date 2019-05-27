@@ -9,6 +9,7 @@ class Router extends Request{
 
     private $params = [];
     private $routes = [];
+    private $tempRoutes = [];
     private $class;
     private $func;
     private $id;
@@ -46,16 +47,68 @@ class Router extends Request{
         }
     }
 
-    public function route(string $request,array $path) {
+    public function getRoutes(){
+        $filename = __DIR__.'/Routes.ini';
+        if (file_exists($filename)) {
+            $routes = parse_ini_file($filename,true);
+            foreach ($routes as $request => $path) {
+                $this->tempRoutes[$request] = $path;
+            }
+            foreach ($this->tempRoutes['routes'] as $key => $value) {
+                $getPath = trim(substr($key, strpos($key, ' ')));
+                $this->routes[$getPath] = $value;
+                $getRequest = substr($key, 0, strpos($key, ' '));
+                
+            }
+            if ($this->getMethod() === $getRequest) {
+                $urlPath = rtrim($this->getPath(),'/').'/';
+                if (array_key_exists($urlPath,$this->routes)) {
+                    $class = substr($this->routes[$urlPath],0,strpos($this->routes[$urlPath],'->'));
+                    $action = substr($this->routes[$urlPath],strpos($this->routes[$urlPath],'->'));
+                    $action = trim($action,'->');
+                    $class = new $class();
+                    return $class->$action();
+                }
+            }
+           // print_r($this->routes);
+            
+        }else{
+            echo 'File does not exists';
+        }
+    }
 
+    public function route(string $request,array $path) {
+        if ($this->getMethod() === $request) {
+            $urlPath = explode('/',$this->getPath());
+            
+            foreach ($urlPath as $key => $value) {
+                $this->routes[$key] = $value;
+            }
+            print_r($this->routes);
+        } else {
+            echo "Wrong request";
+        }
+        
     }
 
     public function get(string $path,callable $func){
-
+        if ($this->isGet()) {
+            if ($this->getPath() === $path) {
+                call_user_func($func);
+            } else {
+                echo "Page thoes not exists";
+            }
+        }
     }
 
     public function post(string $path,callable $func) {
-
+        if ($this->isPost()) {
+            if ($this->getPath() === $path) {
+                call_user_func($func);
+            } else {
+                echo "Page thoes not exists";
+            }
+        }
     }
 
     public function runDynamic() {
