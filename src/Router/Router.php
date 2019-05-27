@@ -12,7 +12,7 @@ class Router extends Request{
     private $tempRoutes = [];
     private $class;
     private $func;
-    private $id;
+    private $message = "Page does not exists!!";
 
     public function __construct() {
 
@@ -60,17 +60,15 @@ class Router extends Request{
                 $getRequest = substr($key, 0, strpos($key, ' '));
                 
             }
-            if ($this->getMethod() === $getRequest) {
-                $urlPath = rtrim($this->getPath(),'/').'/';
-                if (array_key_exists($urlPath,$this->routes)) {
+            $urlPath = rtrim($this->getPath(),'/').'/';
+            if ($this->getMethod() === $getRequest && array_key_exists($urlPath,$this->routes)) {
+                
                     $class = substr($this->routes[$urlPath],0,strpos($this->routes[$urlPath],'->'));
                     $action = substr($this->routes[$urlPath],strpos($this->routes[$urlPath],'->'));
                     $action = trim($action,'->');
                     $class = new $class();
                     return $class->$action();
-                }
             }
-           // print_r($this->routes);
             
         }else{
             echo 'File does not exists';
@@ -91,23 +89,26 @@ class Router extends Request{
         
     }
 
-    public function get(string $path,callable $func){
-        if ($this->isGet()) {
+    public function get(string $path,callable $func) {
+        if ($this->isGet() && preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()) === true) {
+            var_dump(preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()));
             if ($this->getPath() === $path) {
-                call_user_func($func);
-            } else {
-                echo "Page thoes not exists";
+              return  call_user_func($func);
             }
+            echo $this->message;
+        }else{
+        echo "Wrong request method";
         }
     }
 
     public function post(string $path,callable $func) {
-        if ($this->isPost()) {
+        if ($this->isPost() && preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()) === true) {
             if ($this->getPath() === $path) {
-                call_user_func($func);
-            } else {
-                echo "Page thoes not exists";
-            }
+              return  call_user_func($func);
+            } 
+           echo $this->message;
+        }else{
+        echo "Wrong request method";
         }
     }
 

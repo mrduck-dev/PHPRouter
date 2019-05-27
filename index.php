@@ -9,12 +9,13 @@ $router = new Router\Router();
 $router->addRoute('/controller/post/','Controller\Controller','post');
 $router->addRoute('/','Controller\Controller','index'); */
 /* $route = $router->route('GET',['controller'=>'action']); */
-/* $route = $router->get('/controller/action',function(){
+$route = $router->get('/controller/action/',function(){
     echo "Route from index page";
-}); */
+});
 /* $router->runDynamic();  */
-$router->getRoutes();
+//$router->getRoutes();
 //$router->run();
+
 
 
 
