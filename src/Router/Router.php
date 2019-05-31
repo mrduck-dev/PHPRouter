@@ -1,18 +1,15 @@
 <?php
 
 namespace Router;
-
 use Request\Request;
-use Controller\Controller as Controller;
 
 class Router extends Request{
 
     private $params = [];
     private $routes = [];
     private $tempRoutes = [];
-    private $class;
-    private $func;
     private $message = "Page does not exists!!";
+
 
     public function __construct() {
 
@@ -20,31 +17,13 @@ class Router extends Request{
         
     }
 
-    public function addRoute(string $route,string $class,string $func) {
-                 
-        /* if (strpos($route,':id') !== false) {
-                $route = substr($route, 0, strpos($route, ':')); //ovde hvatamo parametar funkcije addRoute() pre id 
-                $this->id = substr($this->getPath(),strlen($route)); //here will be the code to catch soken from url
-                $pathBesforeToken = substr($this->getPath(), 0, strlen($route)); //ovde hvatamo URL  pre id 
-                        
-        } */
-        $route = rtrim($route,"/");
-        $this->routes[] = $route;
-        $this->class = $class;
-        $this->func = $func;
-   
-       /*  $urlPath = explode('/',$this->getPath());
-        $urlPath = array_filter($urlPath);  */ 
-        
-    }
-
-    public function run() {
-       $path = rtrim($this->getPath(),"/");
-        if (in_array($path,$this->routes)) {
-            $routeClass = new $this->class;
-            return  $routeClass->{$this->func}();
+    public function add(string $request,string $params) {
+        preg_match('/^(GET|POST)\b(.+)/',$request,$matches);
+        $path = trim($matches[2]);
+        if ($this->getMethod() === $matches[1] && $this->getPath() === $path) {
+            $this->getControllerAction($params);
+        }       
              
-        }
     }
 
     public function getRoutes(){
@@ -63,11 +42,7 @@ class Router extends Request{
             $urlPath = rtrim($this->getPath(),'/').'/';
             if ($this->getMethod() === $getRequest && array_key_exists($urlPath,$this->routes)) {
                 
-                    $class = substr($this->routes[$urlPath],0,strpos($this->routes[$urlPath],'->'));
-                    $action = substr($this->routes[$urlPath],strpos($this->routes[$urlPath],'->'));
-                    $action = trim($action,'->');
-                    $class = new $class();
-                    return $class->$action();
+                   return $this->getControllerAction($this->routes[$urlPath]);
             }
             
         }else{
@@ -75,23 +50,30 @@ class Router extends Request{
         }
     }
 
-    public function route(string $request,array $path) {
-        if ($this->getMethod() === $request) {
-            $urlPath = explode('/',$this->getPath());
-            
-            foreach ($urlPath as $key => $value) {
-                $this->routes[$key] = $value;
-            }
-            print_r($this->routes);
-        } else {
-            echo "Wrong request";
+
+    private function getControllerAction($param){
+        $controller = substr($param,0,strpos($param,'->'));
+        $action = substr($param,strpos($param,'->'));
+        $action = trim($action,'->');
+        $controller = ucfirst($controller);
+        $controller = new $controller();
+        return $controller->$action();
+    }
+
+    public function route(string $request,string $path) {
+        $parseRequest = explode(' ',$request);
+        foreach ($parseRequest as $path) {
+            $this->routes[] = $path;
+        }   
+        if ($this->getMethod() === $this->routes[0]) {
+            echo "this is".$this->getMethod();
         }
+        print_r($this->routes); 
         
     }
 
     public function get(string $path,callable $func) {
-        if ($this->isGet() && preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()) === true) {
-            var_dump(preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()));
+        if ($this->isGet() && $this->matchPath($this->getPath())) {
             if ($this->getPath() === $path) {
               return  call_user_func($func);
             }
@@ -102,7 +84,7 @@ class Router extends Request{
     }
 
     public function post(string $path,callable $func) {
-        if ($this->isPost() && preg_match("@[a-zA-Z_0-9/\?\=\-]@",$this->getPath()) === true) {
+        if ($this->isPost() && $this->matchPath($this->getPath()) ) {
             if ($this->getPath() === $path) {
               return  call_user_func($func);
             } 
@@ -110,6 +92,13 @@ class Router extends Request{
         }else{
         echo "Wrong request method";
         }
+    }
+
+    private function matchPath(string $matchItem) {
+        if(preg_match("@(\/([a-z0-9+$ -].?)+)*\/?@",$matchItem)){
+                return true;
+        }
+            return false;
     }
 
     public function runDynamic() {
@@ -128,8 +117,7 @@ class Router extends Request{
         }
             $param = $this->params;
             if (empty($param)) {
-                $controller =  new Controller();
-                    return $controller->index();
+                echo 'Page does not exists';
             } else {
         $controller = $this->getController($param);
         $action = $this->getAction($param);
@@ -152,13 +140,13 @@ class Router extends Request{
         
     }
 
-    private function getController(array $param) : object{
-        $controller = $param[1];
-        if (class_exists($controller)) {
-            $controller = new $controller. "\\" .$controller;
-            return $controller;
+    private function getController(array $param) {
+        $controller = ucfirst($param[1]);
+        if (class_exists($controller. "\\" .$controller)) {
+            $controller = $controller. "\\" .$controller;
+            return new $controller();
         } else {
-            return new Controller();
+            throw new \Exception('Class does not exists');
         }
     }
 }
