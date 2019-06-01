@@ -20,10 +20,42 @@ class Router extends Request{
     public function add(string $request,string $params) {
         preg_match('/^(GET|POST)\b(.+)/',$request,$matches);
         $path = trim($matches[2]);
+
+
         if ($this->getMethod() === $matches[1] && $this->getPath() === $path) {
             $this->getControllerAction($params);
-        }       
+        }     
+        $this->findToken($path);  
              
+    }
+
+    private function findToken($url){
+        $token = [];
+        preg_match_all('/{(\w+)}/',$url,$tokens);
+        $tokenPosition = strpos($url,$tokens[0][0]);
+        $tokenFromUrl = substr($this->getPath(),$tokenPosition);
+       // $tokenFromUrl = explode('/',$tokenFromUrl);
+            $test = substr_replace($url,$tokenFromUrl,$tokenPosition);
+       $test2 = explode('/',$tokenFromUrl);
+        foreach ($test2 as $key => $value) {
+            $token[$value] = $value;
+            
+        }
+ 
+        
+        print_r($token);
+        /* $tokenPosition = strpos($url,$token[0]);
+        $tokenFromUrl = substr($this->getPath(),$tokenPosition); */
+       /*  $tokenFromUrl = explode('/',$tokenFromUrl);
+        foreach ($tokenFromUrl as $key => $value) {
+            $test = substr_replace($url,$value,$token[0]);
+        }
+         */
+       // var_dump($tokens[0]);
+        
+        echo "<pre>";
+        print_r($test);
+        echo "</pre>";
     }
 
     public function getRoutes(){
@@ -51,7 +83,7 @@ class Router extends Request{
     }
 
 
-    private function getControllerAction($param){
+    private function getControllerAction($param,$tokens = null){
         $controller = substr($param,0,strpos($param,'->'));
         $action = substr($param,strpos($param,'->'));
         $action = trim($action,'->');
