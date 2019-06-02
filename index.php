@@ -6,7 +6,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 $router = new Router\Router();
 
-$router->add('GET /controller/post/{id}/{bobi}','Controller\Controller->post');
+$router->add('GET /controller/post/{id}/{token}/{bobi}','Controller\Controller->post');
 /* $router->add('GET /controller/arr/{tr}','Controller\Controller->adduser');
 $router->add('GET /controller/action/','Controller\Controller->index'); */
 

@@ -20,43 +20,48 @@ class Router extends Request{
     public function add(string $request,string $params) {
         preg_match('/^(GET|POST)\b(.+)/',$request,$matches);
         $path = trim($matches[2]);
-
-
-        if ($this->getMethod() === $matches[1] && $this->getPath() === $path) {
-            $this->getControllerAction($params);
+        $tokens = $this->findToken($path);
+        /* Prepare paths for matching */
+        $urlPath = substr($this->getPath(),0,strpos($path, '{'));
+        $basePath = substr($path, 0, strpos($path, '{'));
+        
+        if ($this->getMethod() === $matches[1] && $urlPath === $basePath) {
+            $this->getControllerAction($params,$tokens);
         }     
-        $this->findToken($path);  
+          
              
     }
 
     private function findToken($url){
-        $token = [];
+        $tokenValues = [];
+        $tokenName = [];
+        $tokenPosition = [];
+        $tokensFromUrl = [];
+        $numberOfTokens = 0;
         preg_match_all('/{(\w+)}/',$url,$tokens);
-        $tokenPosition = strpos($url,$tokens[0][0]);
-        $tokenFromUrl = substr($this->getPath(),$tokenPosition);
-       // $tokenFromUrl = explode('/',$tokenFromUrl);
-            $test = substr_replace($url,$tokenFromUrl,$tokenPosition);
-       $test2 = explode('/',$tokenFromUrl);
-        foreach ($test2 as $key => $value) {
-            $token[$value] = $value;
+       
+        foreach ($tokens[0] as $token) {
+            $numberOfTokens += 1;
+            $tokenPosition[strpos($url,$token)] = strpos($url,$token);
+            $tokenPosition[$token] = strlen($token);
+            $tokensFromUrl[] = substr($this->getPath(),$tokenPosition[strpos($url,$token)]);
             
         }
- 
-        
-        print_r($token);
-        /* $tokenPosition = strpos($url,$token[0]);
-        $tokenFromUrl = substr($this->getPath(),$tokenPosition); */
-       /*  $tokenFromUrl = explode('/',$tokenFromUrl);
-        foreach ($tokenFromUrl as $key => $value) {
-            $test = substr_replace($url,$value,$token[0]);
-        }
-         */
-       // var_dump($tokens[0]);
-        
-        echo "<pre>";
-        print_r($test);
-        echo "</pre>";
+       
+       $preparedTokens = explode('/',$tokensFromUrl[0],$numberOfTokens);
+       
+       foreach ($preparedTokens as $value) {
+            $tokenValues[] = trim($value,'/');
+
+       }
+       foreach ($tokens[1] as $name) {
+           $tokenName[] = $name;
+       }
+       $params = array_combine($tokenName,$tokenValues);
+       return $params;
     }
+
+    
 
     public function getRoutes(){
         $filename = __DIR__.'/Routes.ini';
@@ -89,7 +94,7 @@ class Router extends Request{
         $action = trim($action,'->');
         $controller = ucfirst($controller);
         $controller = new $controller();
-        return $controller->$action();
+        return $controller->$action($tokens);
     }
 
     public function route(string $request,string $path) {
