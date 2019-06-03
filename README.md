@@ -10,7 +10,7 @@ $router = new Router\Router();
 $router->add('GET /controller/post/{id}','Controller\Controller->post');
 
 //Handle routes with callback
-$route = $router->get('/controller/action/',function(){
+$router->get('/controller/action/',function(){
     echo "Hello new router";
 });
 
