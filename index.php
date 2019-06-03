@@ -6,15 +6,15 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 $router = new Router\Router();
 
-$router->add('GET /controller/post/{id}/{token}/{bobi}','Controller\Controller->post');
-/* $router->add('GET /controller/arr/{tr}','Controller\Controller->adduser');
-$router->add('GET /controller/action/','Controller\Controller->index'); */
+$router->add('GET /controller/post/{id}','Controller\Controller->post');
+$router->add('GET /controller/arr/{bobo}','Controller\Controller->adduser');
+$router->add('GET /controller/action/','Controller\Controller->index');
 
 /* $route = $router->get('/controller/action/{id}',function($id){
     echo "Route from index page";
 }); */
 //$router->runDynamic(); 
-$router->getRoutes();
+//$router->getRoutes();
 
 
 

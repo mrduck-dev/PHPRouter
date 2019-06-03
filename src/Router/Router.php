@@ -18,17 +18,32 @@ class Router extends Request{
     }
 
     public function add(string $request,string $params) {
-        preg_match('/^(GET|POST)\b(.+)/',$request,$matches);
-        $path = trim($matches[2]);
-        $tokens = $this->findToken($path);
-        /* Prepare paths for matching */
-        $urlPath = substr($this->getPath(),0,strpos($path, '{'));
-        $basePath = substr($path, 0, strpos($path, '{'));
-        
-        if ($this->getMethod() === $matches[1] && $urlPath === $basePath) {
-            $this->getControllerAction($params,$tokens);
-        }     
-          
+            preg_match('/^(GET|POST)\b(.+)/',$request,$matches);
+            $basePath = trim($matches[2],' /');
+            $urlPath = trim($this->getPath(),'/');
+            $tokenExists =  preg_match_all('/{(\w+)}/',$basePath);
+
+            if ($tokenExists > 0) {
+                /* Get tokens if any and filter out empty values */
+                $tokens = $this->findToken($basePath);
+                $tokens = array_filter($tokens);
+
+                    if (is_array($tokens) && !empty($tokens) ) {
+                            /* Prepare paths for matching */
+                            $basePath = trim($basePath);
+                            $urlPath = substr($this->getPath(),0,strpos($basePath, '{'));
+                            $basePath = substr($basePath, 0, strpos($basePath, '{'));     
+                        }else {
+                            return http_response_code(404);
+                        }
+
+            }//$tokenExist > 0
+
+                        if ($this->getMethod() === $matches[1] && trim($urlPath,'/') === trim($basePath,'/')) {
+                            $tokens = isset($tokens) ? $tokens : null ;
+                            return $this->getControllerAction($params,$tokens);
+                        }     
+                        return http_response_code(404);
              
     }
 
@@ -57,8 +72,13 @@ class Router extends Request{
        foreach ($tokens[1] as $name) {
            $tokenName[] = $name;
        }
-       $params = array_combine($tokenName,$tokenValues);
-       return $params;
+            if (count($tokenName) === count($tokenValues)) {
+                
+                    $params = array_combine($tokenName,$tokenValues);
+                    return $params;      
+            }
+            return;
+       
     }
 
     
@@ -83,7 +103,7 @@ class Router extends Request{
             }
             
         }else{
-            echo 'File does not exists';
+            return http_response_code(404);
         }
     }
 
@@ -93,8 +113,12 @@ class Router extends Request{
         $action = substr($param,strpos($param,'->'));
         $action = trim($action,'->');
         $controller = ucfirst($controller);
-        $controller = new $controller();
-        return $controller->$action($tokens);
+        if (class_exists($controller)) {
+             $controller = new $controller();
+             if (method_exists($controller,$action)) {
+                return $controller->$action($tokens);
+             }
+        }   
     }
 
     public function route(string $request,string $path) {
