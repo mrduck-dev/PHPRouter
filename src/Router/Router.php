@@ -121,17 +121,6 @@ class Router extends Request{
         }   
     }
 
-    public function route(string $request,string $path) {
-        $parseRequest = explode(' ',$request);
-        foreach ($parseRequest as $path) {
-            $this->routes[] = $path;
-        }   
-        if ($this->getMethod() === $this->routes[0]) {
-            echo "this is".$this->getMethod();
-        }
-        print_r($this->routes); 
-        
-    }
 
     public function get(string $path,callable $func) {
         if ($this->isGet() && $this->matchPath($this->getPath())) {
