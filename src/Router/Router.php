@@ -109,16 +109,27 @@ class Router extends Request{
 
 
     private function getControllerAction($param,$tokens = null){
-        $controller = substr($param,0,strpos($param,'->'));
-        $action = substr($param,strpos($param,'->'));
-        $action = trim($action,'->');
-        $controller = ucfirst($controller);
-        if (class_exists($controller)) {
-             $controller = new $controller();
-             if (method_exists($controller,$action)) {
-                return $controller->$action($tokens);
-             }
-        }   
+        if (!is_array($param)) {
+            $controller = substr($param,0,strpos($param,'->'));
+            $action = substr($param,strpos($param,'->'));
+            $action = trim($action,'->');
+        }else{
+            $class = ucfirst($param[1]);
+                if (class_exists($class)) {
+                    $controller = $class;
+                } elseif(class_exists($class."\\".$class)){
+                    $controller = $class."\\".$class;
+                }
+            $action = $param[2];
+        }
+        
+         $controller = ucfirst($controller);
+            if (class_exists($controller)) {
+                $controller = new $controller();
+                if (method_exists($controller,$action)) {
+                    return $controller->$action($tokens);
+                }
+            }   
     }
 
 
@@ -144,59 +155,19 @@ class Router extends Request{
         }
     }
 
-    private function matchPath(string $matchItem) {
+    private function matchPath(string $matchItem) : bool {
         if(preg_match("@(\/([a-z0-9+$ -].?)+)*\/?@",$matchItem)){
                 return true;
         }
             return false;
     }
 
-    public function runDynamic() {
-
+    public function runDynamic($controller) {
         if ($this->isGet()) {
-            $this->handleDynamicRoute($this->getPath());
+            $this->handleDynamicRoute($this->getPath(),$controller);
         } else {
             new \Exception("Something is wrong with path");
         }
     }
 
-    private function handleDynamicRoute($path) {
-        $controller = explode("/", $path);
-        foreach ($controller as $key => $value) {
-            $this->params[] = addslashes($value);
-        }
-            $param = $this->params;
-            if (empty($param)) {
-                echo 'Page does not exists';
-            } else {
-        $controller = $this->getController($param);
-        $action = $this->getAction($param);
-            return $controller->$action();
-        } 
-    }
-
-    private function getAction(array $param) : string {
-        $controller = $this->getController($param);
-        if (isset($param[2])) {
-            $action = $param[2];
-            if (method_exists($controller,$action)) {  
-                return $action;
-            } else {
-                return 'index';
-            }
-        } else {
-            return 'index';
-        }
-        
-    }
-
-    private function getController(array $param) {
-        $controller = ucfirst($param[1]);
-        if (class_exists($controller. "\\" .$controller)) {
-            $controller = $controller. "\\" .$controller;
-            return new $controller();
-        } else {
-            throw new \Exception('Class does not exists');
-        }
-    }
 }
