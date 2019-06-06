@@ -5,7 +5,6 @@ use Request\Request;
 
 class Router extends Request{
 
-    private $params = [];
     private $routes = [];
     private $tempRoutes = [];
     private $message = "Page does not exists!!";
@@ -26,7 +25,6 @@ class Router extends Request{
             if ($tokenExists > 0) {
                 /* Get tokens if any and filter out empty values */
                 $tokens = $this->findToken($basePath);
-                $tokens = array_filter($tokens);
 
                     if (is_array($tokens) && !empty($tokens) ) {
                             /* Prepare paths for matching */
@@ -47,37 +45,58 @@ class Router extends Request{
              
     }
 
-    private function findToken($url){
-        $tokenValues = [];
-        $tokenName = [];
-        $tokenPosition = [];
-        $tokensFromUrl = [];
-        $numberOfTokens = 0;
-        preg_match_all('/{(\w+)}/',$url,$tokens);
-       
-        foreach ($tokens[0] as $token) {
-            $numberOfTokens += 1;
-            $tokenPosition[strpos($url,$token)] = strpos($url,$token);
-            $tokenPosition[$token] = strlen($token);
-            $tokensFromUrl[] = substr($this->getPath(),$tokenPosition[strpos($url,$token)]);
-            
-        }
-       
-       $preparedTokens = explode('/',$tokensFromUrl[0],$numberOfTokens);
-       
-       foreach ($preparedTokens as $value) {
-            $tokenValues[] = trim($value,'/');
+    private function token($basePath,$urlPath){
+            /* Get tokens if any and filter out empty values */
+            $tokens = $this->findToken($basePath);
 
-       }
-       foreach ($tokens[1] as $name) {
-           $tokenName[] = $name;
-       }
-            if (count($tokenName) === count($tokenValues)) {
+                if (is_array($tokens) && !empty($tokens) ) {
+                        /* Prepare paths for matching */
+                        $basePath = trim($basePath);
+                        $urlPath = substr($this->getPath(),0,strpos($basePath, '{'));
+                        $basePath = substr($basePath, 0, strpos($basePath, '{'));   
+                         return $tokens;  
+                    }else {
+                        return http_response_code(404);
+                    }
+    }
+
+    private function findToken($url){
+            $tokenValues = [];
+            $tokenName = [];
+            $tokenPosition = [];
+            $tokensFromUrl = [];
+            $numberOfTokens = 0;
+            $tokenTypeExists = preg_match('/{(\w+)}/',$url);
+            $tokenAtExists = preg_match('/@(\w+)/',$url);
+            
+                if ($tokenTypeExists > 0) {
+                    preg_match_all('/{(\w+)}/',$url,$tokens);
+                }elseif ($tokenAtExists > 0) {
+                    preg_match_all('/@(\w+)/',$url,$tokens);
+                }
+            
+            foreach ($tokens as $token) {
+                    foreach ($token as $key) {
+                        $numberOfTokens += 1;
+                        $tokenPosition[strpos($url,$key)] = strpos($url,$key);
+                        $tokenPosition[$key] = strlen($key);
+                        $tokensFromUrl[] = substr($this->getPath(),$tokenPosition[strpos($url,$key)]);
+                    }
                 
-                    $params = array_combine($tokenName,$tokenValues);
-                    return $params;      
             }
-            return;
+                        $preparedTokens = explode('/',$tokensFromUrl[0],$numberOfTokens);
+                        foreach ($preparedTokens as $value) {
+                                $tokenValues[] = trim($value,'/');
+                        }
+        $tokenValues = array_filter($tokenValues);
+        foreach ($tokens[1] as $name) {
+            $tokenName[] = $name;
+        }
+                if (count($tokenName) === count($tokenValues)) {
+                        $params = array_combine($tokenName,$tokenValues);
+                        return $params;      
+                }
+                return;
        
     }
 
@@ -91,15 +110,32 @@ class Router extends Request{
                 $this->tempRoutes[$request] = $path;
             }
             foreach ($this->tempRoutes['routes'] as $key => $value) {
-                $getPath = trim(substr($key, strpos($key, ' ')));
-                $this->routes[$getPath] = $value;
+                $basePath = trim(substr($key, strpos($key, ' ')));
+                $tokenExists =  preg_match_all('/@(\w+)/',$basePath);
+                if ($tokenExists > 0) {
+                        /* Get tokens if any and filter out empty values */
+                        $tokens = $this->findToken($basePath);
+
+                        if (is_array($tokens) && !empty($tokens) ) {
+                                /* Prepare paths for matching */
+                                $basePath = trim($basePath);
+                                $urlPath = substr($this->getPath(),0,strpos($basePath, '@'));
+                                $basePath = substr($basePath, 0, strpos($basePath, '@'));     
+                            }else {
+                                return http_response_code(404);
+                            }
+                }
+
+
+                $this->routes[$basePath] = $value;
+                
                 $getRequest = substr($key, 0, strpos($key, ' '));
                 
             }
-            $urlPath = rtrim($this->getPath(),'/').'/';
+          
             if ($this->getMethod() === $getRequest && array_key_exists($urlPath,$this->routes)) {
-                
-                   return $this->getControllerAction($this->routes[$urlPath]);
+                    $tokens = isset($tokens) ? $tokens : null ;
+                   return $this->getControllerAction($this->routes[$urlPath],$tokens);
             }
             
         }else{
@@ -109,36 +145,23 @@ class Router extends Request{
 
 
     private function getControllerAction($param,$tokens = null){
-        if (!is_array($param)) {
             $controller = substr($param,0,strpos($param,'->'));
-            $action = substr($param,strpos($param,'->'));
-            $action = trim($action,'->');
-        }else{
-            $class = ucfirst($param[1]);
-                if (class_exists($class)) {
-                    $controller = $class;
-                } elseif(class_exists($class."\\".$class)){
-                    $controller = $class."\\".$class;
-                }
-            $action = $param[2];
-        }
-        
-         $controller = ucfirst($controller);
-            if (class_exists($controller)) {
-                $controller = new $controller();
-                if (method_exists($controller,$action)) {
-                    return $controller->$action($tokens);
-                }
-            }   
+                $action = substr($param,strpos($param,'->'));
+                    $action = trim($action,'->');  
+                        $controller = ucfirst($controller);
+                            if (class_exists($controller)) {
+                                $controller = new $controller();
+                                if (method_exists($controller,$action)) {
+                                    return $controller->$action($tokens);
+                                }
+                            }   
     }
 
 
     public function get(string $path,callable $func) {
         if ($this->isGet() && $this->matchPath($this->getPath())) {
-            if ($this->getPath() === $path) {
-              return  call_user_func($func);
-            }
-            echo $this->message;
+                
+            $this->getRoute($path,$func);
         }else{
         echo "Wrong request method";
         }
@@ -146,13 +169,37 @@ class Router extends Request{
 
     public function post(string $path,callable $func) {
         if ($this->isPost() && $this->matchPath($this->getPath()) ) {
-            if ($this->getPath() === $path) {
-              return  call_user_func($func);
-            } 
-           echo $this->message;
+            $this->getRoute($path,$func);
+            
         }else{
         echo "Wrong request method";
         }
+    }
+
+    private function getRoute(string $path,callable $func){
+        $basePath = trim($path,' /');
+        $urlPath = trim($this->getPath(),'/');
+        $tokenExists =  preg_match_all('/{(\w+)}/',$basePath);
+
+        if ($tokenExists > 0) {
+            /* Get tokens if any and filter out empty values */
+            $tokens = $this->findToken($basePath);
+                if (is_array($tokens) && !empty($tokens) ) {
+                        /* Prepare paths for matching */
+                        $basePath = trim($basePath);
+                        $urlPath = substr($this->getPath(),0,strpos($basePath, '{'));
+                        $basePath = substr($basePath, 0, strpos($basePath, '{'));     
+                    }else {
+                        return http_response_code(404);
+                    }
+
+        }//$tokenExist > 0
+
+        if (trim($urlPath,'/') === trim($basePath,'/')) {
+            
+          return  call_user_func($func,$tokens);
+        }
+       echo $this->message;
     }
 
     private function matchPath(string $matchItem) : bool {
@@ -160,14 +207,6 @@ class Router extends Request{
                 return true;
         }
             return false;
-    }
-
-    public function runDynamic($controller) {
-        if ($this->isGet()) {
-            $this->handleDynamicRoute($this->getPath(),$controller);
-        } else {
-            new \Exception("Something is wrong with path");
-        }
     }
 
 }
